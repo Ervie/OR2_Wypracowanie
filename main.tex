@@ -39,6 +39,36 @@ Przykładowe topologie sieci połączeń:
 	\label{img:sieć}
 \end{figure}
 
+\subsection{Zasada działania MPI}
+
+MPI jako interfejs przeznaczony do pracy z obliczeniami rozproszonymi oparty został o model sieciowy, posiadaja jednak kilka cech, które wyróżniają od standardowej implementacji tego wzorca. MPI można potraktować jako interfejs pomiędzy programem a systemem operacyjnym.
+
+Tradycyjnie, każdy z procesów posiada własną pamięć lokalną, co narzuca konieczność komunikacji przez dwukierunkowe łącza kounikacyjne (w nomenklaturze MPI nazwywane \textbf{komunikatorami}). Komunikacja polega na przesłaniu danych z pamięci procesu źródłowego do pamięci lokalnej procesu docelowego przy wykorzystaniu węzłów pośrednich. Domyślnie każdy nowoutworzony proces znajduje się w komunikatorze świat (MPI\textunderscore COMM\textunderscore WORLD). Takie rozwiązanie sprawia, że każdy proces może wymieniać dane z dowolnym pośród pozostałych, niezależnie od fizycznej struktury procesorów (jest ona przezroczysta dla procesów). Istnieje możliwość zdefiniowania własnych komunikatorów -- co może okazać się przydatne w przypadku, gdy programista chce zawężyć zakres procesów, do których wysyłana jest wiadomość rozgłoszeniowa (ang. \textit{broadcast}).
+
+W trakcie tworzenia programu w oparciu o ten interfejs, warto podzielić część programu przeznaczoną do obliczeń rozproszonych na części, które mają zostać przydzielone do osobnych procesów. Na początku pracy, deklarowana jest ilość procesów, które mają zostać zaangażowane do pracy. Może się to odbywać na jeden z 2 sposobów:
+
+\begin{itemize}
+	\item Statyczny -- procesy tworzone są przed wykonaniem programu. Program (proces główny, tak zwany \textit{root}) nie może zostać zakończony przed końcem pracy wszystkich pozostałych procesów.
+	\item Dynamiczny -- Potrzebne procesy są tworzone podczas pracy programu. Ta opcja jest dostępna wyłącznie dla wersji MPI-2 (zaprezentowanej w 1997 roku).
+\end{itemize}
+
+Każdy utworzony proces posiada własny unikalny identyfikator (id) w ramach komunikatora. W różnych komunikatorach ten sam proces może posiadać różne id. Identyfikatorem procesu głównego (\textit{roota}) jest liczba 0.
+
+W momencie tworzenia nowego procesu, tworzona jest kopia programu przeznaczonego tylko dla tego procesu. W praktyce oznacza to, że posiada dostęp do każdej zmiennej zadeklarowanej globalnie, jednak tylko w ramach lokalnej kopii. W przypadku, gdy proces potrzebuje danych znajdujących się w innym węźle, konieczna jest wymiana informacji w ramach komunikatora. Do rozdzielania pracy stosuje się standardowe operacje rozgałęzienia (między innymi instrukcje \textit{if} czy \textit{else} w językach C/C++) identyfikując id procesu. Jest to technika zwana SPMD (\textit{Single Program Multiple Data} -- pojedynczy program, wiele danych), będący subkategorią MIMD (\textit{Multiple Instruction Multiple Data} - wiele instrukcji, wiele danych), znanej z taksonomii Flynna. Zazwyczaj utworzone kopie programów działają w sposób asynchroniczny, lecz może dojść do sytuacji, w której procesy te będą działały synchronicznie. Określony sposób działania może być uzależniony od funkcji, jakie zostaną użyte przez programistę.
+
+\subsection{Inicjalizacja i zakończenie}
+
+% również comm size i comm rank
 \section{Komunikacja między procesami w biliotece MPI}
 
-\section{Redukcja danych w bibliotece MPI}
+\subsection{Komunikacja punkt-punkt}
+
+\subsection{Komunikacja rozgłoszeniowa}
+
+\subsection{Redukcja danych}
+
+\subsection{Dodatkowe funkcje}
+
+% Isend i Ireceive, Scatter i Gather
+
+\subsection{Redukcja danych w bibliotece MPI}
