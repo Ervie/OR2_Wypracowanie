@@ -56,9 +56,88 @@ Każdy utworzony proces posiada własny unikalny identyfikator (id) w ramach kom
 
 W momencie tworzenia nowego procesu, tworzona jest kopia programu przeznaczonego tylko dla tego procesu. W praktyce oznacza to, że posiada dostęp do każdej zmiennej zadeklarowanej globalnie, jednak tylko w ramach lokalnej kopii. W przypadku, gdy proces potrzebuje danych znajdujących się w innym węźle, konieczna jest wymiana informacji w ramach komunikatora. Do rozdzielania pracy stosuje się standardowe operacje rozgałęzienia (między innymi instrukcje \textit{if} czy \textit{else} w językach C/C++) identyfikując id procesu. Jest to technika zwana SPMD (\textit{Single Program Multiple Data} -- pojedynczy program, wiele danych), będący subkategorią MIMD (\textit{Multiple Instruction Multiple Data} - wiele instrukcji, wiele danych), znanej z taksonomii Flynna. Zazwyczaj utworzone kopie programów działają w sposób asynchroniczny, lecz może dojść do sytuacji, w której procesy te będą działały synchronicznie. Określony sposób działania może być uzależniony od funkcji, jakie zostaną użyte przez programistę.
 
-\subsection{Inicjalizacja i zakończenie}
+\subsection{Kompilacja i uruchamianie}
 
-% również comm size i comm rank
+Szczegóły związane z kompilacją i uruchamianiem programu napisanego przy użyciu biblioteki MPI są zależne od używanego systemu operacyjnego. Większość z nich do kompilacji używa komendy, której można użyć z poziomu linii poleceń/terminala: \\
+
+\texttt{\$ mpicc -g -Wall -o <plik\textunderscore źródłowy> <plik\textunderscore wynikowy>.c} \\
+
+Zazwyczaj \texttt{mpicc} jest skryptem opakowującym (ang. \textit{wrapper script}) dla kompilatora języka (dla powyższego przypadku, języka C). Skrypt opakowujący jest pisany w celu uruchomienia określonego programu. Skrypt ten upraszcza uruchomienie kompilatora poprzez jawne wskazanie, w którym miejscu znajdują się potrzebne pliki nagłówkowe oraz które biblioteki nalezy połączyć z plikiem obiektu.
+
+Uruchamianie skompilowanego programu odbywa się przez następującą komendę: \\
+
+\texttt{mpirun -np <liczba\textunderscore procesów> <nazwa\textunderscore pliku\textunderscore wynikowego> <parametry>} \\
+
+W wyżej wymienionej komendzie <liczba\textunderscore procesów> jest liczbą całkowitą dodatnią i wskazuje, ile procesów ma być wykonanych równolegle. <nazwa\textunderscore pliku\textunderscore wynikowego> oraz <parametry> przekazywane są do procesów za pośrednicztwem zmiennych \texttt{argc} i \texttt{argv} znajdujących się w nagłówku funkcji main (zgodnie z zasadami języka C).
+
+
+\subsection{Inicjalizacja i kończenie programu}
+
+Większość elementów składowych programu napisanego przy użyciu MPI jest instrukcjami natywnymi używanego języka (C, C++, Ada, Fortran). Aby umożliwić korzystanie z instrukcji nowej biblioteki, należy dodać następującą instrukcję (w języku C): \\
+
+\texttt{include "mpi.h"} \\
+
+Spowoduje to włączenie pliku nagłówkowego \texttt{mpi.h}. Znajdują się w nim prototypy funkcji MPI, makrodefinicje, definicje typów oraz inne  definicje i deklaracje potrzebne do skompilowania programu MPI. Pierwszą instrukcją, jaka jest wykonywana przed rozdzieleniem pracy pomiędzy wątki jest \texttt{MPI\textunderscore INIT} o następującej składni: \\
+
+\begin{lstlisting}[language=C]
+int MPI_Init(
+	int* argc_p 
+	char*** argv_p)
+\end{lstlisting} 
+
+Argumenty funkcji są wskaźnikami do argumentów funkcji main, kolejno \texttt{argc} i \texttt{argv}. W przypadku, gdy parametry wywołania nie istnieją lub nie są potrzebne dla instrukcji MPI, można do obu przekazać wartość NULL. Wartością zwracaną przez \texttt{MPI\textunderscore Init} jest kod błedu, co jest standardem dla większości funkcji tej biblioteki. Jeżeli zwrócona wartość jest równa \texttt{MPI\textunderscore SUCCESS}, oznacza to poprawne wykonanie inicjalizacji. Pozostałe kody oznaczają błędy jakie wystąpiły podczas pracy, a ich wartości uzależnione są od implementacji bilioteki. Informację o tym, czy w danym momencie programu mechanizm MPI został zainicjalizowany, możemy uzyskać za pomocą funkcji \texttt{MPI\textunderscore Initialized}. Rzadziej używaną alternatywe dla \texttt{MPI\textunderscore Init} stanowi \texttt{MPI\textunderscore Init\textunderscore thread}, który dodatkowo inicjalizuje środowisko wątków.
+
+Analogicznie, ostatnią instrukcją, jaka powinna zostać wywołana w programie MPI, jest funkcja finalizacji: \\
+
+\texttt{int MPI\textunderscore Finalize(void);} \\
+
+Jej wywołanie powoduje zwolnienie wszystkich zasobów komputera, które zostały wcześniej zaalokowane przez funkcję inicjalizacji, a następnie wykorzystywane w trakcie obliczeń równoległych. Podobnie jak wcześniejsza funkcja, MPI\textunderscore Finalize zwraca kod błędu.
+
+Nieobowiązkowymi, ale niemal równie ważnymi funkcjami są \texttt{MPI\textunderscore Comm\textunderscore size} oraz \texttt{MPI\textunderscore Comm\textunderscore rank} o następującej składni:
+
+\begin{lstlisting}[language=C]
+int MPI_Comm_size(
+	MPI_Comm_comm,
+	int* comm_s z_p);
+
+int MPI_Comm_rank(
+	MPI_Comm_comm,
+	int* my_rank_p);
+\end{lstlisting}
+ 
+ W obu przypadkach, pierwszym argumentem jest komunikator, w którym znajduje się proces go wywołujący. Komunikatory w bibliotece MPI są nieprzeźroczystym obiektem (tzn. o nieznanej wewnętrznej strukturze), w ramach której kolekcja procesów może wymieniać między sobą dane. Posiadają one własny typ, \texttt{MPI\textunderscore Comm}. \texttt{MPI\textunderscore Comm\textunderscore size} jako swój drugi argument zwraca liczbę procesów znajdującą się w komuikatorze, natomiast \texttt{MPI\textunderscore Comm\textunderscore rank} informuje jaki identyfikator został przydzielony procesowi który wykonał tę funkcję w ramach komunikatora. Funkcje te ułatwiają rozdzielanie zadać pomiędzy procesy oraz kontrolę nad przepływem pracy algorytmu równoległego.
+ 
+\subsection{Typy danych w MPI}
+
+Interfejs MPI wykorzystuje własne typy danych w trakcie wymiany informacji. Zamiast informacji o ilości przesyłanych bajtów, w trakcie transfery wysyłana jest informacja o ilości przesyłanych elementów danego typu (argument \texttt{count}). Wartość ta może być równa zero, co jest tożsame z informacją, że część wiadomości zawierająca dane jest pusta. Podstawowe typy danych MPI, których można użyć w trakcie komunikacji odpowiadają typom podstawowym języka programowania, z którego korzystamy i różnią się w zależności od implementacji.
+
+
+
+\begin{figure}[h]
+	\begin{center}
+	\begin{tabular}{|c|c|}
+		\hline Typ MPI & Odpowiednik w języku C \\ 
+		\hline MPI\textunderscore CHAR & char \\ 
+		\hline MPI\textunderscore SHORT & signed short int \\ 
+		\hline MPI\textunderscore INT & signed int \\ 
+		\hline MPI\textunderscore LONG & signed long int \\ 
+		\hline MPI\textunderscore LONG\textunderscore LONG\textunderscore INT & signed long long int \\ 
+		\hline MPI\textunderscore SIGNED\textunderscore CHAR & signed char \\ 
+		\hline MPI\textunderscore UNSIGNED\textunderscore CHAR & unsigned char \\ 
+		\hline MPI\textunderscore UNSIGNED & unsigned short int \\ 
+		\hline MPI\textunderscore UNSIGNED\textunderscore LONG & unsigned long int \\ 
+		\hline MPI\textunderscore FLOAT & float \\ 
+		\hline MPI\textunderscore DOUBLE & double \\ 
+		\hline MPI\textunderscore LONG\textunderscore DOUBLE & long double \\ 
+		\hline MPI\textunderscore C\textunderscore BOOL & \textunderscore Bool \\ 
+		\hline MPI\textunderscore BYTE & 8 bitów (8 cyfr binarnych \\ 
+		\hline MPI\textunderscore PACKED & - \\
+		\hline 
+	\end{tabular} 
+	\caption{Najważniejsze typy MPI i ich odpowiedniki dla języka C Źródło: \cite{MPI}, str 26}
+	\label{table:datatypes}
+\end{center}
+\end{figure}
 \section{Komunikacja między procesami w biliotece MPI}
 
 \subsection{Komunikacja punkt-punkt}
@@ -70,5 +149,3 @@ W momencie tworzenia nowego procesu, tworzona jest kopia programu przeznaczonego
 \subsection{Dodatkowe funkcje}
 
 % Isend i Ireceive, Scatter i Gather
-
-\subsection{Redukcja danych w bibliotece MPI}
