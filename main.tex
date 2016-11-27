@@ -130,7 +130,7 @@ Interfejs MPI wykorzystuje własne typy danych w trakcie wymiany informacji. Zam
 		\hline MPI\textunderscore DOUBLE & double \\ 
 		\hline MPI\textunderscore LONG\textunderscore DOUBLE & long double \\ 
 		\hline MPI\textunderscore C\textunderscore BOOL & \textunderscore Bool \\ 
-		\hline MPI\textunderscore BYTE & 8 bitów (8 cyfr binarnych \\ 
+		\hline MPI\textunderscore BYTE & 8 bitów (8 cyfr binarnych) \\ 
 		\hline MPI\textunderscore PACKED & - \\
 		\hline 
 	\end{tabular} 
@@ -142,10 +142,78 @@ Interfejs MPI wykorzystuje własne typy danych w trakcie wymiany informacji. Zam
 
 \subsection{Komunikacja punkt-punkt}
 
+\subsubsection{MPI\textunderscore Send}
+Ten rodzaj komunikacji stanowi jeden z dwóch podstawowych odmian transferu danych w modelu sieciowym. Polega on na przesyłaniu wiadomości pomiędzy określona parą procesów. W bibliotece MPI służy do tego para funkcji \texttt{MPI\textunderscore Send} oraz \texttt{MPI\textunderscore Receive}. Składnia nagłówka pierwszej z nich prezentuje się następująco: 
+\begin{lstlisting}[language=C]
+int MPI Send(
+	void* message_buff,
+	int message_size,
+	MPI_Datatype message_type/,
+	int dest,
+	int tag ,
+	MPI_Comm communicator);
+\end{lstlisting}
+
+Gdzie:
+\begin{itemize}
+	\item \texttt{\textbf{message\textunderscore buff}} -- pierwszy argument funkcji będący wskaźnikiem na bufor, w którym przetrzymywana jest wiadomość wysyłana przez proces. Jest to adres (w pamięci przeznaczonej na zmienne), pod którym zapisana jest wiadomość przed wysłaniem.
+	\item \texttt{\textbf{message\textunderscore size}} -- określa, ile elementów ma zostać przesłanych w wiadomości
+	\item \texttt{\textbf{message\textunderscore type}} -- typ wysyłanych danych. Stanowi jeden z wbudowanych typów danych dla MPI \hyperref[table:datatypes]{Rozdział 2.6} lub typ pochodny zdefiniowany przez użytkownika.
+	\item \texttt{\textbf{dest}} -- id procesu, do którego wiadomość ma zostać przesłana.
+	\item \texttt{\textbf{tag}} -- liczba nieujemna z zakresu 0 do 32767 (lub więcej, zależnie od implementacji). Informacja, mająca na celu ułatwienie rozróżniania procesów. Umożliwia to wysyłanie dodatkowej informacji do innych procesów.
+	\item \texttt{\textbf{communicator}} -- nazwa komunikatora, w ramach którego wysyłana jest wiadomość.
+\end{itemize}
+
+Wszystkie wymienione parametry są parametrami wejściowymi. Działanie \texttt{MPI\textunderscore Send} może być uzależnione od implementacji. Rozróżnia się 2 sposoby komunikacji:
+
+\begin{itemize}
+	\item Komunikacja synchroniczna -- polega na wstrzymaniu obliczeń przez proces wysyłający do momentu, gdy proces odbierający zgłosi gotowość do przyjęcia wiadomości. Dopiero po zgłoszeniu, informacja zostaje wysłana i procesy kontynują pracę.
+	\item Komunikacja buforowana -- po wywołaniu funkcji \texttt{MPI\textunderscore Send} wiadomość kopiowana jest do bufora, a proces wysyłający kontynuuje pracę. Proces odbierający może pobrać wiadomość z bufora w dowolnym momencie, o ile jest ona aktualnie dostępna. Ten sposób przyspiesza działanie programu w porównaniu do poprzednika, ale wymaga obecności buforowania w systemie obliczeniowym.
+\end{itemize}
+
+\subsubsection{MPI\textunderscore Receive}
+Funkcją służącą do odbierania wiadomości wysłanych przy pomocy \texttt{MPI\textunderscore Send} jest \texttt{MPI\textunderscore Receive} o nagłówku:
+\begin{lstlisting}[language=C]
+int MPI Recv(
+	void* message_buff,
+	int message_size,
+	MPI Datatype message_type,
+	int source,
+	int tag,
+	MPI_Comm communicator,
+	MPI_Status* status);
+\end{lstlisting}
+
+Gdzie:
+
+\begin{itemize}
+	\item \texttt{\textbf{message\textunderscore buff}} wskazuje na obszar pamięci, do którego zapisane zostaną otrzymane dane.
+	\item \texttt{\textbf{message\textunderscore size}} -- liczba danych, z których ma się składać wczytana wiadomość
+	\item \texttt{\textbf{message\textunderscore type}} -- typ wysyłanych danych. Stanowi jeden z wbudowanych typów danych dla MPI \hyperref[table:datatypes]{Rozdział 2.6} lub typ pochodny zdefiniowany przez użytkownika. Należy zwrócić szczególną uwagę, aby w obszarze pamięci, do którego będzie zapisywana wiadomość, istniała odpowiednia ilość wolnego miejsca.
+	\item \texttt{\textbf{source}} -- identyfikator procesu, od którego odbierana będzie wiadomość.
+	\item \texttt{\textbf{tag}} -- liczba nieujemna z zakresu 0 do 32767 (lub więcej, zależnie od implementacji). Informacja, mająca na celu ułatwienie rozróżniania procesów. Umożliwia to wysyłanie dodatkowej informacji do innych procesów.
+	\item \texttt{\textbf{communicator}} -- nazwa komunikatora, w ramach którego wysyłana jest wiadomość.
+	\item \texttt{\textbf{status}} -- wskaźnik do struktury przechowujacej informacje o odebranej wiadomości. Struktura taka zawiera m. in. dane o numerze (id) nadawcy, znaczniku oraz o kodzie błędu.
+\end{itemize}
+
+Większość parametrów ma charakter wejściowy, za wyjątkiem \texttt{message\textunderscore buff} oraz \texttt{status}, które mają charakter wyjściowy. Funkcja MPI\textunderscore Receive jest funkcją blokującą, co oznacza że proces w momencie jej wywołania jest blokowany do momentu odebrania wiadomości.
+
+\subsubsection{Dodatkowe funkcje i struktury}
+
+Dla zwiększenia elastyczności (oraz przyspieszenia wykonania programów równoległych) w bibliotece MPI zaimplementowano dodatkowe elementy:
+
+\begin{itemize}
+	\item \texttt{MPI\textunderscore ISend} -- specyficzna odmiana funkcji \texttt{MPI\textunderscore Send}. W przeciwieństwie do poprzedniczki nie blokuje procesu wysyłającego, niezależnie od obecności buforowania w systemie. Wiadomość jest wysyłana, a sterowanie natychmiast oddawane jest do procesu nadawcy, pozwalając na kontynuowanie obliczeń. Proces ten powinien po jakimś czasie wywołać funkcję \texttt{MPI\textunderscore Wait} w celu sprawdzenia, czy wysyłanie zostało zakończone.
+	\item \texttt{MPI\textunderscore IReceive} -- nieblokująca odmiana
+	\texttt{MPI\textunderscore Receive}. Jej wywołanie inicjuje odbieranie wiadomości, po czym sterowanie wraca do procesu wywołującego, który kontunuuje obliczenia. Podobnie jak wyżej, można wywołać funkcję \texttt{MPI\textunderscore Wait} (lub alternatywnie \texttt{MPI\textunderscore Test} sprawdzającą, czy wiadomość została odebrana.
+	\item \texttt{MPI\textunderscore ANY\textunderscore SOURCE} -- zezwala na przyjęcie dowolnego typu danych ze źródła.
+	\item \texttt{MPI\textunderscore ANY\textunderscore TAG} -- pozwala na przyjęcie dowolnego znacznika ze źródła.
+	\item \texttt{MPI\textunderscore Probe} -- funkcja pozwalająca na sprawdzenie przychodzącej wiadomości bez jej właściwego odebrania. Umożliwia uniknięcie sytuacji, w której typ oraz identyfikator nadawcy są zgodne, jednak wiadomość jest za duża i trzeba zaalokować dodatkową pamięć przed jej odebraniem.
+	
+\end{itemize}
+
 \subsection{Komunikacja rozgłoszeniowa}
 
 \subsection{Redukcja danych}
 
-\subsection{Dodatkowe funkcje}
-
-% Isend i Ireceive, Scatter i Gather
+% Scatter i Gather
