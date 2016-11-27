@@ -145,7 +145,7 @@ Interfejs MPI wykorzystuje własne typy danych w trakcie wymiany informacji. Zam
 \subsubsection{MPI\textunderscore Send}
 Ten rodzaj komunikacji stanowi jeden z dwóch podstawowych odmian transferu danych w modelu sieciowym. Polega on na przesyłaniu wiadomości pomiędzy określona parą procesów. W bibliotece MPI służy do tego para funkcji \texttt{MPI\textunderscore Send} oraz \texttt{MPI\textunderscore Receive}. Składnia nagłówka pierwszej z nich prezentuje się następująco: 
 \begin{lstlisting}[language=C]
-int MPI Send(
+int MPI_Send(
 	void* message_buff,
 	int message_size,
 	MPI_Datatype message_type/,
@@ -158,7 +158,7 @@ Gdzie:
 \begin{itemize}
 	\item \texttt{\textbf{message\textunderscore buff}} -- pierwszy argument funkcji będący wskaźnikiem na bufor, w którym przetrzymywana jest wiadomość wysyłana przez proces. Jest to adres (w pamięci przeznaczonej na zmienne), pod którym zapisana jest wiadomość przed wysłaniem.
 	\item \texttt{\textbf{message\textunderscore size}} -- określa, ile elementów ma zostać przesłanych w wiadomości
-	\item \texttt{\textbf{message\textunderscore type}} -- typ wysyłanych danych. Stanowi jeden z wbudowanych typów danych dla MPI \hyperref[table:datatypes]{Rozdział 2.6} lub typ pochodny zdefiniowany przez użytkownika.
+	\item \texttt{\textbf{message\textunderscore type}} -- typ wysyłanych danych. Stanowi jeden z wbudowanych typów danych dla MPI \hyperref[table:datatypes]{Rozdział 2.5} lub typ pochodny zdefiniowany przez użytkownika.
 	\item \texttt{\textbf{dest}} -- id procesu, do którego wiadomość ma zostać przesłana.
 	\item \texttt{\textbf{tag}} -- liczba nieujemna z zakresu 0 do 32767 (lub więcej, zależnie od implementacji). Informacja, mająca na celu ułatwienie rozróżniania procesów. Umożliwia to wysyłanie dodatkowej informacji do innych procesów.
 	\item \texttt{\textbf{communicator}} -- nazwa komunikatora, w ramach którego wysyłana jest wiadomość.
@@ -174,7 +174,7 @@ Wszystkie wymienione parametry są parametrami wejściowymi. Działanie \texttt{
 \subsubsection{MPI\textunderscore Receive}
 Funkcją służącą do odbierania wiadomości wysłanych przy pomocy \texttt{MPI\textunderscore Send} jest \texttt{MPI\textunderscore Receive} o nagłówku:
 \begin{lstlisting}[language=C]
-int MPI Recv(
+int MPI_Recv(
 	void* message_buff,
 	int message_size,
 	MPI Datatype message_type,
@@ -189,7 +189,7 @@ Gdzie:
 \begin{itemize}
 	\item \texttt{\textbf{message\textunderscore buff}} wskazuje na obszar pamięci, do którego zapisane zostaną otrzymane dane.
 	\item \texttt{\textbf{message\textunderscore size}} -- liczba danych, z których ma się składać wczytana wiadomość
-	\item \texttt{\textbf{message\textunderscore type}} -- typ wysyłanych danych. Stanowi jeden z wbudowanych typów danych dla MPI \hyperref[table:datatypes]{Rozdział 2.6} lub typ pochodny zdefiniowany przez użytkownika. Należy zwrócić szczególną uwagę, aby w obszarze pamięci, do którego będzie zapisywana wiadomość, istniała odpowiednia ilość wolnego miejsca.
+	\item \texttt{\textbf{message\textunderscore type}} -- typ wysyłanych danych. Stanowi jeden z wbudowanych typów danych dla MPI \hyperref[table:datatypes]{Rozdział 2.5} lub typ pochodny zdefiniowany przez użytkownika. Należy zwrócić szczególną uwagę, aby w obszarze pamięci, do którego będzie zapisywana wiadomość, istniała odpowiednia ilość wolnego miejsca.
 	\item \texttt{\textbf{source}} -- identyfikator procesu, od którego odbierana będzie wiadomość.
 	\item \texttt{\textbf{tag}} -- liczba nieujemna z zakresu 0 do 32767 (lub więcej, zależnie od implementacji). Informacja, mająca na celu ułatwienie rozróżniania procesów. Umożliwia to wysyłanie dodatkowej informacji do innych procesów.
 	\item \texttt{\textbf{communicator}} -- nazwa komunikatora, w ramach którego wysyłana jest wiadomość.
@@ -212,8 +212,108 @@ Dla zwiększenia elastyczności (oraz przyspieszenia wykonania programów równo
 	
 \end{itemize}
 
-\subsection{Komunikacja rozgłoszeniowa}
+\subsection{Komunikacja kolektywna oraz redukcja danych}
 
-\subsection{Redukcja danych}
+Komunikacja typu punkt-punkt pozwala precyzyjnie wskazać, jak ma odbywać się transfer wiadomości między procesami, nie jest jednak pozbawiony wad. W przypadku, gdy istnieje potrzeba zaangażowania dużej ilości procesów (gdzie dla nowoczesnych superkomputerów wartość ta może figurować na poziomie dziesiątek lub setek tysięcy) zaprogramowanie każdej pary procesorów między którymi ma odbywać się komunikacja byłoby niezwykle żmudnym zajęciem. W tym celu istnieje \textbf{komunikacja kolektywna}, w ramach której wszystkie procesy wykonują tą samą funkcję komunikacyjną. Przykładem komunikacji kolektywnej jest operacja rozgłaszania ("jeden do wszystkich"). Podstawowe funkcje, które implementują ją w biliotece MPI to \texttt{MPI\textunderscore Bcast} oraz \texttt{MPI\textunderscore Reduce}.
 
-% Scatter i Gather
+\subsubsection{MPI\textunderscore Bcast}
+
+Nagłówek funkcji \texttt{MPI\textunderscore Bcast} prezentuje się następująco:
+
+\begin{lstlisting}[language=C]
+int MPI_Bcast (
+	void *buffer,
+	int count,
+	MPI_Datatype type,
+	int root,
+	MPI_Comm comm);
+\end{lstlisting}
+
+Gdzie:
+\begin{itemize}
+	\item \texttt{\textbf{buffer}} -- adres początkowy miejsca w pamięci, gdzie przetrzymywana jest wiadomość do wysłania.
+	\item \texttt{\textbf{message\textunderscore count}} -- określa, ile elementów ma zostać przesłanych w wiadomości
+	\item \texttt{\textbf{message\textunderscore type}} -- typ wysyłanych danych. Stanowi jeden z wbudowanych typów danych dla MPI \hyperref[table:datatypes]{Rozdział 2.5} lub typ pochodny zdefiniowany przez użytkownika.
+	\item \texttt{\textbf{root}} -- identyfikator procesu, który dokonuje rozgłoszenia wiadomości.
+	\item \texttt{\textbf{comm}} -- komunikator w ramach którego wykonywane jest rozgłoszenie.
+\end{itemize}
+
+Użycie tej funkcji sprawia, że proces o id równemu arguemntowi \texttt{root} wysyła dane \texttt{buffer} do wszystkich pozostałych procesów w ramach komunikatora \texttt{comm}. Wszyskie procesy, które biorą udział w rozgłaszaniu muszą posiadać identyczne  parametry. Charakter parametrów jest zależny od wykonawcy: dla procesu \texttt{root} parametry mają charakter wejściowy, a we wszystkich innych -- wyjściowy. Ponieważ rodzaj komunikacji znacząco różni się od punkt-punkt, funkcja ta jest niekompatybilna z funkcjami \texttt{MPI\textunderscore Send} oraz \texttt{MPI\textunderscore Receive}. Do odebrania informacji wysłanych przez rozgłaszanie, konieczne jest zastosowanie operacji redukcji. W przypadku, gdy któryś z procesów uczestniczących w rozgłaszaniu nie wykona wywołania tej funkcji, istnieje ryzyko zablokowania pracy w ramach komunikatora.
+
+\begin{figure}[!h]
+	\centering
+	\includegraphics[width=0.8\textwidth]{./img/bcast.png}
+	\caption{Schemat rozgłaszania dla 8 procesów. Źródło: \cite{Czech}, str 180}
+	\label{img:sieć}
+\end{figure}
+
+\subsubsection{MPI\textunderscore Reduce}
+
+Funkcja redukcji również należy do komunikacji kolektywnej i stanowi przeciwieństwo rozgłaszania. Jest to operacja typu "wszystkie do jednego" (ang. \textit{all-to-one}. Nagłówek tej funkcji ma następującą postać:
+
+\begin{lstlisting}[language=C]
+int MPI_Reduce(
+	void* collected_data,
+	void* result_data,
+	int count,
+	MPI_Datatype type,
+	MPI_Op operator,
+	int dest,
+	MPI_Comm comm);
+\end{lstlisting}
+
+Gdzie:
+
+\begin{itemize}
+	\item \texttt{\textbf{collected\textunderscore data}} -- adres pierwszej danej, na której zostanie wykonana operacja redukcji we wszystkich procesach w ramach komunikatora.
+	\item \texttt{\textbf{result\textunderscore data}} -- adres pamięci, pod jaki zostanie zapisany wynik redukcji.
+	\item \texttt{\textbf{count}} -- liczba danych, na których zostani wykonana operacja redukcji.
+	\item \texttt{\textbf{type}} --  typ odbieranych i liczonych danych. Stanowi jeden z wbudowanych typów danych dla MPI \hyperref[table:datatypes]{Rozdział 2.5} lub typ pochodny zdefiniowany przez użytkownika.
+	\item \texttt{\textbf{operator}} -- wskazuje, jaki rodzaj operacji ma zostać wykonany na odebranych danych.
+	\item \texttt{\textbf{dest}} -- identyfikator wskazujący, który proces ma odebrać i przetworzyć dane.
+	\item \texttt{\textbf{comm}} -- komunikator, w ramach którego wykonana zostanie operacja redukcji
+\end{itemize}
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.6\textwidth]{./img/redukcja.png}
+	\caption{Przykładowy schemat redukcji sumy dla 8 procesów. Źródło: \cite{Pacheco}, str 102}
+	\label{img:sieć}
+\end{figure}
+
+Operacja redukcji polega na zredukowaniu danych lokalnych przechowywanych w procesach do jednej danej, charakteryzującej lokalnie zbiór danych. Po jej wykonaniu, wynik zostaje zapisany w procesie korzeniu. Niemal wszystkie parametry w funkcji \texttt{MPI\textunderscore Reduce} mają charakter wejściowy zarówo dla korzenia odbierającego dane oraz procesów wysyłająych. Wyjątkiem jest parametr przechowujący informację o wyniku, mający charakter wyjściowy.
+
+W tabeli \ref{table:reduceOp} przedstawiono dostępne operacje, które można wstawić w miejsce argumentu \texttt{operator}. Istnieje możliwość zadefiniowania własnej operacji redukcji. Większość standardowych operacji redukowana jest do pojedynczje wartości. Wyjątek od reguły stanowią \texttt{MPI\textunderscore MAXLOC} oraz \texttt{MPI\textunderscore MINLOC}, gdzie zarówno dane wyjściowe jak i wyjściowe stanowią parę wielkości. Parę wejściową tworzą dana podlegająca redukcji, a także identyfikator procesu, w którym ta dana się znajduje. Analogicznie, parę wyjściową stanowi dana wynikowa (maksimum lub minimum pośród danych lokalnych wszystkich węzłów) oraz numer jej procesu.
+
+\begin{figure}[h]
+	\begin{center}
+	\begin{tabular}{|c|c|c|}
+		\hline Nazwa & Znaczenie & Typ argumentów \\ 
+		\hline MPI\textunderscore MAX & maksimum & całkowity oraz rzeczywisty \\ 
+		\hline MPI\textunderscore MIN & minimum & całkowity oraz rzeczywisty \\ 
+		\hline MPI\textunderscore SUM & suma & całkowity oraz rzeczywisty \\ 
+		\hline MPI\textunderscore PROD & iloczyn & całkowity oraz rzeczywisty \\ 
+		\hline MPI\textunderscore LAND & logiczne and & całkowity \\ 
+		\hline MPI\textunderscore LOR & logiczne or & całkowity \\ 
+		\hline MPI\textunderscore LXOR & logiczne exclusive or & całkowity \\ 
+		\hline MPI\textunderscore BAND & bitowe and & całkowity oraz byte \\ 
+		\hline MPI\textunderscore BOR & bitowe or & całkowity oraz byte \\ 
+		\hline MPI\textunderscore BXOR & bitowe exclusive or & całkowity oraz byte \\ 
+		\hline MPI\textunderscore MAXLOC & maksmum i jego lokalizacja & pary wielkości \\ 
+		\hline MPI\textunderscore MINLOC & minimum i jego lokalizacja & pary wielkości \\ 
+		\hline 
+	\end{tabular} 
+	\caption{Dostępne operacje dla funkcji MPI\textunderscore Reduce Źródło: \cite{MPI}, str 176}
+	\label{table:reduceOp}
+	\end{center}
+\end{figure}
+
+\subsubsection{Dodatkowe funkcje i struktury}
+
+Podobnie jak przypadku komunikacji typu punkt-punkt, do dyspozycji programisty zostały oddane inne funkcje umożliwiające komunikację kolektywną.
+
+\begin{description}
+	\item[\texttt{MPI\textunderscore Allreduce}] stanowi alternatwyną wersję \texttt{MPI\textunderscore Reduce}. Posiada prawie identyczną listę argumentów, a jedyną różnicą jest brak argumentu numeru procesu docelowego. Wynika z założenia działania funkcji -- po dokonaniu redukcji, wynik działania wysyłany jest do wszystkich procesów w ramach komunikatora.
+\end{description}
+
+% Scatter i Gather, Allreduce z Pacheco
